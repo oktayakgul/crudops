@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+
+
+<!--<span th:text="${totalStudent}"></span> student added.-->
+<!--<br><span th:text="${result}"></span>-->
+<!--&#45;&#45;&#45;&#45;<p th:text="${totalStudent}"></p>-->
+<!--<h2 th:text="${totalStudent}"></h2><h2>Students</h2>-->
+
+<table>
+<tr th:each="instance : ${resultMap}">
+    <td th:text="${instance.key}">key</td>
+    <td th:text="${instance.value}">value</td>
+</tr>
+
+
+<!--    <tr>-->
+<!--        <th>ID</th>-->
+<!--        <th>NAME</th>-->
+<!--        <th>SURNAME</th>-->
+<!--    </tr>-->
+<!--    <tr th:each="student : ${studentList}">-->
+<!--        <td th:text="${student.id}">Id</td>-->
+<!--        <td th:text="${student.name}">Name</td>-->
+<!--        <td th:text="${student.surname}">Surname</td>-->
+<!--    </tr>-->
+</table>
+
+</body>
+</html>
