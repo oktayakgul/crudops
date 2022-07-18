@@ -1,6 +1,8 @@
 package com.oa.crudops.controller;
 
+import com.oa.crudops.model.response.StudentResponse;
 import com.oa.crudops.service.StudentService;
+import org.openjdk.jmh.runner.RunnerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,14 +26,25 @@ public class HomeController {
         return "studentList";
     }
 
-    @GetMapping("/addNewbies{count}")
-    public String insertStudents(@PathVariable("count") int count, Model model){
+    @GetMapping("/addNewbies{itemCount}-{loopCount}")
+    public String insertStudents(@PathVariable("itemCount") int itemCount, @PathVariable("loopCount") int loopCount, Model model){
 
-        var students = studentService.insertStudents(count);
+        itemCount = itemCount <=0 ? 100 : itemCount;
+        loopCount = loopCount <=0 ? 1 : loopCount;
+
+
+        var students = studentService.insertStudents(itemCount, loopCount);
 
         model.addAttribute("studentList", students.getStudentList());
         model.addAttribute("totalStudent", students.getTotalStudent());
         model.addAttribute("resultMap", students.getResultMap());
+
+        return "studentList";
+    }
+//
+    @GetMapping("/benchmark")
+    public String benchmark(Model model) throws RunnerException {
+         studentService.benchmark(100,1);
 
         return "studentList";
     }

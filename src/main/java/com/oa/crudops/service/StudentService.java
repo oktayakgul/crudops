@@ -1,21 +1,28 @@
 package com.oa.crudops.service;
 
 import com.oa.crudops.Util;
+import com.oa.crudops.jmh.JMHBenchmarking;
 import com.oa.crudops.model.entity.Student;
 import com.oa.crudops.model.response.StudentResponse;
 import com.oa.crudops.repository.StudentRepository;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
+@State(Scope.Benchmark)
 public class StudentService {
 
     @Autowired
     StudentRepository repository;
 
-    int invokeNo, count, loopCount;
+    int invokeNo, itemCount, loopCount;
 
     public StudentResponse getStudents() {
         StudentResponse response = new StudentResponse();
@@ -28,27 +35,42 @@ public class StudentService {
         return response;
     }
 
-    public StudentResponse insertStudents(int count) {
+    public StudentResponse insertStudents(int itemCount, int loopCount) {
         StudentResponse response = new StudentResponse();
         Map<String, String> resultMap = new HashMap<>();
+        Map<String, String> sortedMap;
         invokeNo = 0;
-        this.count = count;
-        this.loopCount = 1;
+        this.itemCount = itemCount;
+        this.loopCount = loopCount;
 
         repository.deleteAll();
 
 
-        resultMap.put("1-insert_AsSplittedList_for_saveAll", insert_AsSplittedList_for_saveAll());
-        resultMap.put("2-insert_asWholeList_for_saveAll", insert_asWholeList_for_saveAll());
-        resultMap.put("3-insert_asWholeList_for_save_stream", insert_asWholeList_for_save_stream());
-        resultMap.put("4-insert_asWholeList_for_save_parallel_stream", insert_asWholeList_for_save_parallel_stream());
+        resultMap.put("1-insert_splittedList_for_saveAll", insert_splittedList_for_saveAll());
+        resultMap.put("2-insert_list_saveAll", insert_list_saveAll());
+        resultMap.put("3-insert_list_stream_save", insert_list_stream_save());
+        resultMap.put("4-insert_list_stream_parallel_save", insert_list_stream_parallel_save());
 
-        response.setResultMap(resultMap);
+        //sortedMap = resultMap.entrySet().stream().sorted().sorted(Map.Entry.comparingByKey()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (k,v) -> k, LinkedHashMap::new));
+
+        sortedMap = new TreeMap<String , String>(
+                new Comparator<String>() {
+                    @Override
+                    public int compare(String o1, String o2) {
+                        return o1.compareTo(o2);
+                    }
+                }
+        );
+
+        sortedMap.putAll(resultMap);
+
+        response.setResultMap(sortedMap);
         resultMap.entrySet().stream().forEach(item -> System.out.println(item.getValue()));
         return response;
     }
 
-    private String insert_asWholeList_for_save_parallel_stream() {
+
+    private String insert_list_stream_parallel_save() {
         long totalMillisec = 0;
 
         for (int i = 0; i < loopCount; i++) {
@@ -66,11 +88,11 @@ public class StudentService {
                 System.out.println(e.fillInStackTrace());
             }
         }
-        return (loopCount * count) + " items added in " + totalMillisec + " millisec.";
+        return (loopCount * itemCount) + " items added in avarage " + totalMillisec/loopCount + " millisec.";
 
     }
 
-    private String insert_asWholeList_for_save_stream() {
+    private String insert_list_stream_save() {
         long totalMillisec = 0;
 
         for (int i = 0; i < loopCount; i++) {
@@ -88,11 +110,11 @@ public class StudentService {
                 System.out.println(e.fillInStackTrace());
             }
         }
-        return (loopCount * count) + " items added in " + totalMillisec + " millisec.";
+        return (loopCount * itemCount) + " items added in avarage " + totalMillisec/loopCount + " millisec.";
 
     }
 
-    private String insert_asWholeList_for_saveAll() {
+    private String insert_list_saveAll() {
         long totalMillisec = 0;
 
         for (int i = 0; i < loopCount; i++) {
@@ -109,12 +131,15 @@ public class StudentService {
                 System.out.println(e.fillInStackTrace());
             }
         }
-        return (loopCount * count) + " items added in " + totalMillisec + " millisec.";
+        return (loopCount * itemCount) + " items added in avarage " + totalMillisec/loopCount + " millisec.";
 
 
     }
 
-    private String insert_AsSplittedList_for_saveAll() {
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public String insert_splittedList_for_saveAll() {
         long totalMillisec = 0;
 
         for (int i = 0; i < loopCount; i++) {
@@ -133,15 +158,16 @@ public class StudentService {
                 System.out.println(e.fillInStackTrace());
             }
         }
-        return (loopCount * count) + " items added in " + totalMillisec + " millisec.";
+        System.out.println((loopCount * itemCount) + " items added in avarage " + totalMillisec/loopCount + " millisec.");
+        return (loopCount * itemCount) + " items added in avarage " + totalMillisec/loopCount + " millisec.";
     }
 
     private List<Student> generateTestData() {
         List<Student> newbies = new ArrayList<>();
-        count = count == 0 ? 1_000 : count;
+        itemCount = itemCount == 0 ? 1_000 : itemCount;
 
-        int iFrom = invokeNo * count;
-        int iTo = ++invokeNo * count;
+        int iFrom = invokeNo * itemCount;
+        int iTo = ++invokeNo * itemCount;
         Student student;
         for (int i = iFrom; i < iTo; i++) {
             student = new Student(i, "Name of " + i, "Surname of " + i);
@@ -151,4 +177,14 @@ public class StudentService {
     }
 
 
+    public StudentResponse benchmark(int itemCount, int loopCount) throws RunnerException {
+
+        Options opt = new OptionsBuilder()
+                .include(JMHBenchmarking.class.getSimpleName())
+                .forks(2)
+                .build();
+        new Runner(opt).run();
+
+        return null;
+    }
 }
